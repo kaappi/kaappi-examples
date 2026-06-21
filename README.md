@@ -2,45 +2,43 @@
 
 Example applications for [Kaappi Scheme](https://github.com/kaappi/kaappi),
 demonstrating the [Redis](https://github.com/kaappi/kaappi-redis),
-[PostgreSQL](https://github.com/kaappi/kaappi-pg), and
-[HTTP](https://github.com/kaappi/kaappi-http) libraries.
+[PostgreSQL](https://github.com/kaappi/kaappi-pg),
+[HTTP](https://github.com/kaappi/kaappi-http),
+[JSON](https://github.com/kaappi/kaappi-json), and
+[Web](https://github.com/kaappi/kaappi-web) libraries.
 
 ## Setup
 
-Clone and build all libraries:
+Install all libraries with [thottam](https://github.com/kaappi/kaappi):
 
 ```bash
-cd /path/to/kaappi
-(cd kaappi && zig build)
-(cd kaappi-redis && make)
-(cd kaappi-pg && make)
-(cd kaappi-http && make)
+# One-time setup
+thottam install kaappi-web     # installs kaappi-http, kaappi-json, kaappi-net
+thottam install kaappi-redis
+thottam install kaappi-pg
+
+# Verify
+thottam list
 ```
 
-Set the library and dynamic linker paths:
-
-```bash
-export DYLD_LIBRARY_PATH=../kaappi-redis:../kaappi-pg:../kaappi-http:$(pg_config --libdir)
-
-alias krun='../kaappi/zig-out/bin/kaappi \
-  --lib-path ../kaappi-redis/lib \
-  --lib-path ../kaappi-pg/lib \
-  --lib-path ../kaappi-http/lib'
-```
+> If thottam is not on your PATH, run it directly: `../kaappi/scripts/thottam install ...`
 
 ## Examples
 
-### REST API (Redis + PostgreSQL + HTTP)
+### REST API (Redis + PostgreSQL + HTTP + JSON)
 
-A full REST API server with PostgreSQL storage and Redis caching.
+A full REST API server with PostgreSQL storage, Redis caching, and
+JSON request/response handling via the kaappi-web framework.
 
 ```bash
 createdb kaappi_demo
 redis-server --daemonize yes
-cd rest-api && krun app.scm
+cd rest-api && kaappi app.scm
 
 # In another terminal:
-curl -X POST -d "name=Alice&email=alice@example.com" http://localhost:8080/users
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"name":"Alice","email":"alice@example.com"}' \
+     http://localhost:8080/users
 curl http://localhost:8080/users
 curl http://localhost:8080/users/1    # cached in Redis
 ```
@@ -53,9 +51,9 @@ Producer/consumer job queue using Redis lists.
 
 ```bash
 cd redis-task-queue
-krun app.scm producer   # enqueue 10 tasks
-krun app.scm worker     # process all tasks
-krun app.scm status     # show results
+kaappi app.scm producer   # enqueue 10 tasks
+kaappi app.scm worker     # process all tasks
+kaappi app.scm status     # show results
 ```
 
 ### PostgreSQL CRUD
@@ -65,11 +63,11 @@ Interactive contact book with full CRUD, search, and statistics.
 ```bash
 cd pg-crud
 createdb kaappi_demo
-krun app.scm seed                              # insert sample data
-krun app.scm list                              # list all contacts
-krun app.scm search alice                      # search by name/email
-krun app.scm add "Eve" "eve@test.com" "555-0"  # add contact
-krun app.scm stats                             # show statistics
+kaappi app.scm seed                              # insert sample data
+kaappi app.scm list                              # list all contacts
+kaappi app.scm search alice                      # search by name/email
+kaappi app.scm add "Eve" "eve@test.com" "555-0"  # add contact
+kaappi app.scm stats                             # show statistics
 ```
 
 ### HTTP File Server
@@ -78,6 +76,6 @@ Serves static files from a directory with MIME type detection.
 
 ```bash
 cd http-file-server
-krun app.scm 8080 .     # serve current directory on port 8080
+kaappi app.scm 8080 .     # serve current directory on port 8080
 # Then: open http://localhost:8080/app.scm
 ```
