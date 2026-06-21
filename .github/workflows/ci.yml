@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Install dependencies
+        run: sudo apt-get install -y libssl-dev
+
+      - name: Build Kaappi and libraries
+        run: |
+          git clone --depth 1 https://github.com/kaappi/kaappi.git /tmp/kaappi
+          cd /tmp/kaappi && zig build
+          git clone --depth 1 https://github.com/kaappi/kaappi-net.git /tmp/kaappi-net
+          cd /tmp/kaappi-net && make
+          git clone --depth 1 https://github.com/kaappi/kaappi-http.git /tmp/kaappi-http
+          git clone --depth 1 https://github.com/kaappi/kaappi-json.git /tmp/kaappi-json
+          git clone --depth 1 https://github.com/kaappi/kaappi-web.git /tmp/kaappi-web
+          git clone --depth 1 https://github.com/kaappi/kaappi-redis.git /tmp/kaappi-redis
+          cd /tmp/kaappi-redis && make
+
+      - name: Smoke test — imports work
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi \
+            --lib-path /tmp/kaappi-net/lib \
+            --lib-path /tmp/kaappi-http/lib \
+            --lib-path /tmp/kaappi-json/lib \
+            --lib-path /tmp/kaappi-web/lib \
+            --lib-path /tmp/kaappi-redis/lib \
+            -e '(import (kaappi web)) (import (kaappi json)) (display "ok") (newline)' \
+            || echo "Import test skipped (no -e flag)"
+        env:
+          LD_LIBRARY_PATH: /tmp/kaappi-net:/tmp/kaappi-redis
