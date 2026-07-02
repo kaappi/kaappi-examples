@@ -176,6 +176,23 @@ kaappi app.scm lazy "(define (try a b) (if (= a 0) 1 b)) (try 0 (/ 1 0))"
 kaappi app.scm repl                                         # interactive REPL
 ```
 
+### Game of Life (Pure Scheme)
+
+Conway's cellular automaton on a toroidal grid. Each generation builds
+a fresh grid from the previous one — functional immutability. Includes
+classic patterns (glider, blinker, Gosper glider gun, R-pentomino),
+random grids, and animated terminal display via ANSI escapes. No
+external libraries needed.
+
+```bash
+cd game-of-life
+kaappi app.scm demo                          # blinker, glider, gun, R-pentomino, random
+kaappi app.scm glider 20 10 30               # glider on 20x10 grid, 30 generations
+kaappi app.scm gun 40 20 100                 # Gosper glider gun
+kaappi app.scm random 30 20 50 42 30         # random 30x20, seed 42, 30% density
+kaappi app.scm animate glider 20 10 50       # animated terminal display
+```
+
 ### HTTP File Server
 
 Serves static files from a directory with MIME type detection.

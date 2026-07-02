@@ -71,3 +71,7 @@ jobs:
       - name: Smoke test — env evaluator
         run: |
           /tmp/kaappi/zig-out/bin/kaappi env-evaluator/app.scm demo
+
+      - name: Smoke test — game of life
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi game-of-life/app.scm demo
