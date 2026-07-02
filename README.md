@@ -1,11 +1,12 @@
 # kaappi-examples
 
 Example applications for [Kaappi Scheme](https://github.com/kaappi/kaappi),
-demonstrating the [Redis](https://github.com/kaappi/kaappi-redis),
+showcasing pure Scheme programming and the ecosystem libraries including
+[Redis](https://github.com/kaappi/kaappi-redis),
 [PostgreSQL](https://github.com/kaappi/kaappi-pg),
 [HTTP](https://github.com/kaappi/kaappi-http),
 [JSON](https://github.com/kaappi/kaappi-json), and
-[Web](https://github.com/kaappi/kaappi-web) libraries.
+[Web](https://github.com/kaappi/kaappi-web).
 
 ## Setup
 
@@ -68,6 +69,22 @@ kaappi app.scm list                              # list all contacts
 kaappi app.scm search alice                      # search by name/email
 kaappi app.scm add "Eve" "eve@test.com" "555-0"  # add contact
 kaappi app.scm stats                             # show statistics
+```
+
+### Symbolic Differentiation (Pure Scheme)
+
+Constructs ASTs for mathematical expressions and computes symbolic
+derivatives using recursive tree-walking with algebraic simplification.
+No external libraries needed.
+
+```bash
+cd symbolic-differentiation
+kaappi app.scm demo                            # show example derivatives
+kaappi app.scm diff "(* x x)" x                # d/dx(x*x) = 2*x
+kaappi app.scm diff "(sin (* 2 x))" x          # chain rule
+kaappi app.scm diff "(ln (+ (^ x 2) 1))" x    # 2x / (x^2 + 1)
+kaappi app.scm simplify "(+ (* 1 x) (* y 0))"  # simplify to x
+kaappi app.scm eval "(+ (* 2 3) (- 10 4))"     # evaluate to 12
 ```
 
 ### HTTP File Server

@@ -43,3 +43,7 @@ jobs:
             || echo "Import test skipped (no -e flag)"
         env:
           LD_LIBRARY_PATH: /tmp/kaappi-net:/tmp/kaappi-redis
+
+      - name: Smoke test — symbolic differentiation
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi symbolic-differentiation/app.scm demo
