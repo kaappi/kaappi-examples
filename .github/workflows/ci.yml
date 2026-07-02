@@ -55,3 +55,7 @@ jobs:
       - name: Smoke test — maze solver
         run: |
           /tmp/kaappi/zig-out/bin/kaappi maze-solver/app.scm demo
+
+      - name: Smoke test — sorting algorithms
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi sorting/app.scm demo

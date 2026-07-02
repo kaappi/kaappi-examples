@@ -116,6 +116,21 @@ kaappi app.scm solve 15 10             # generate + solve + show path
 kaappi app.scm solve 15 10 42          # solve with specific RNG seed
 ```
 
+### Sorting Algorithms (Pure Scheme)
+
+Quicksort and merge sort implemented purely with higher-order functions —
+no mutation in the sorting algorithms. Showcases closures, function
+composition, custom comparators, sort-by-key, and stability. No external
+libraries needed.
+
+```bash
+cd sorting
+kaappi app.scm demo                    # run all sorting demonstrations
+kaappi app.scm bench 5000              # benchmark with 5000 random elements
+kaappi app.scm quick 5 3 8 1 9         # quicksort numbers from CLI
+kaappi app.scm merge banana apple date # merge sort strings from CLI
+```
+
 ### HTTP File Server
 
 Serves static files from a directory with MIME type detection.
