@@ -87,6 +87,21 @@ kaappi app.scm simplify "(+ (* 1 x) (* y 0))"  # simplify to x
 kaappi app.scm eval "(+ (* 2 3) (- 10 4))"     # evaluate to 12
 ```
 
+### Metacircular Evaluator (Pure Scheme)
+
+A self-interpreting Scheme interpreter — Scheme code that evaluates
+Scheme code. Implements lexical scoping, closures, mutation, and the
+classic eval/apply loop. No external libraries needed.
+
+```bash
+cd metacircular-evaluator
+kaappi app.scm demo                                         # run all demos
+kaappi app.scm eval "(+ 1 2)"                               # evaluate expression
+kaappi app.scm eval "(define (f x) (* x x)) (f 5)"          # multi-expression
+kaappi app.scm eval "(define (adder n) (lambda (x) (+ n x))) ((adder 10) 32)"
+kaappi app.scm repl                                         # interactive REPL
+```
+
 ### HTTP File Server
 
 Serves static files from a directory with MIME type detection.

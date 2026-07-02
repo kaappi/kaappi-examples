@@ -47,3 +47,7 @@ jobs:
       - name: Smoke test — symbolic differentiation
         run: |
           /tmp/kaappi/zig-out/bin/kaappi symbolic-differentiation/app.scm demo
+
+      - name: Smoke test — metacircular evaluator
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi metacircular-evaluator/app.scm demo
