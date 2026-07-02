@@ -59,3 +59,7 @@ jobs:
       - name: Smoke test — sorting algorithms
         run: |
           /tmp/kaappi/zig-out/bin/kaappi sorting/app.scm demo
+
+      - name: Smoke test — matrix math
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi matrix-math/app.scm demo

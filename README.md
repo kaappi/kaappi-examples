@@ -131,6 +131,20 @@ kaappi app.scm quick 5 3 8 1 9         # quicksort numbers from CLI
 kaappi app.scm merge banana apple date # merge sort strings from CLI
 ```
 
+### Matrix Math (Pure Scheme)
+
+Matrix operations using nested recursion with explicit accumulators — no
+mutation in any computation. Supports exact rational arithmetic (fractions
+stay exact through all operations) and pretty-printed output with
+right-aligned columns. No external libraries needed.
+
+```bash
+cd matrix-math
+kaappi app.scm demo                                       # run all demos
+kaappi app.scm multiply "((1 2) (3 4))" "((5 6) (7 8))"  # multiply two matrices
+kaappi app.scm power "((1 1) (1 0))" 20                   # Fibonacci via M^20
+```
+
 ### HTTP File Server
 
 Serves static files from a directory with MIME type detection.
