@@ -159,6 +159,23 @@ kaappi app.scm encode "MISSISSIPPI"    # encode with full analysis
 kaappi app.scm analyze "hello world"   # frequency table and code lengths
 ```
 
+### Environment-Model Evaluator (Pure Scheme)
+
+A Scheme evaluator with explicit environment chains and switchable
+evaluation strategy — applicative-order (eager) and normal-order (lazy)
+with memoizing thunks. Demonstrates lexical scoping, closures, letrec,
+and the classic lazy-vs-eager divergence examples. No external libraries
+needed.
+
+```bash
+cd env-evaluator
+kaappi app.scm demo                                         # all demos (eager + lazy)
+kaappi app.scm eval "(+ 1 2)"                               # evaluate eagerly
+kaappi app.scm eval "(define (fact n) (if (= n 0) 1 (* n (fact (- n 1))))) (fact 10)"
+kaappi app.scm lazy "(define (try a b) (if (= a 0) 1 b)) (try 0 (/ 1 0))"
+kaappi app.scm repl                                         # interactive REPL
+```
+
 ### HTTP File Server
 
 Serves static files from a directory with MIME type detection.

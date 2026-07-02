@@ -67,3 +67,7 @@ jobs:
       - name: Smoke test — huffman coding
         run: |
           /tmp/kaappi/zig-out/bin/kaappi huffman-coding/app.scm demo
+
+      - name: Smoke test — env evaluator
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi env-evaluator/app.scm demo
