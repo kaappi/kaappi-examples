@@ -25,7 +25,7 @@ thottam install kaappi-web kaappi-redis kaappi-pg
 kaappi rest-api/app.scm
 
 # If thottam is not on PATH:
-../kaappi/scripts/thottam install ...
+../kaappi/zig-out/bin/thottam install ...
 
 # If kaappi is not on PATH:
 ../kaappi/zig-out/bin/kaappi <example>/app.scm
@@ -64,6 +64,25 @@ Conventions:
 - Builds kaappi from source + all ecosystem libraries
 - Smoke tests library imports
 - Smoke tests pure Scheme examples
+
+## Kaappi Reference Sources
+
+When writing examples, verify Kaappi features against these sources (not from memory).
+All paths are relative to this repo root (`kaappi-examples/`):
+
+- **Kaappi source code**: `../kaappi/` — the Zig implementation
+  - `../kaappi/src/` — core runtime, compiler, VM, GC, primitives (~48k lines)
+  - `../kaappi/lib/` — portable Scheme SRFI libraries (.sld files)
+  - `../kaappi/CLAUDE.md` — detailed build options, architecture, coding patterns
+- **Ecosystem libraries**: `../kaappi-*/` — one repo per library
+  - `../kaappi-json/lib/` — JSON parser/writer
+  - `../kaappi-http/lib/` — HTTP client/server
+  - `../kaappi-web/lib/` — web framework
+  - `../kaappi-pg/lib/` — PostgreSQL client
+  - `../kaappi-redis/lib/` — Redis client
+  - Each has `lib/kaappi/<name>.sld` with exported procedure definitions
+- **Wiki**: `../wiki/` — Scheme language reference
+- **Docs site**: `../kaappi.github.io/` — end-user documentation
 
 ## Dependencies
 
