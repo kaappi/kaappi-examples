@@ -38,8 +38,9 @@ All examples follow a consistent structure:
 1. **Header** — `;;;` doc-comment with name, description, usage, prerequisites
 2. **Imports** — `(import (scheme base) (scheme write) (scheme process-context) ...)`
 3. **Sections** — separated with `;; --- Section Name ---`
-4. **Main dispatch** — `(let ((args (command-line))) (cond ...))` matching
-   `(list-ref args 2)` against subcommands with `equal?`
+4. **Main dispatch** — `user-args` helper strips the script path from
+   `(command-line)`, then `(let ((args (user-args))) (cond ...))` matches
+   `(car args)` against subcommands with `equal?`
 5. **Usage fallback** — `else` clause prints help text
 
 Conventions:
@@ -51,7 +52,8 @@ Conventions:
 ## Adding a New Example
 
 1. Create `<name>/app.scm` following the style above
-2. Add a section to `README.md` under `## Examples`
+2. Add a section to `README.md` under the appropriate group
+   (`## Pure Scheme Examples` or `## Ecosystem Examples`)
 3. Add a smoke test step to `.github/workflows/ci.yml`
 4. Pure Scheme examples need no library setup; ecosystem examples
    should document prerequisites in the header comment
