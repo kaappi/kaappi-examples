@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Bash(../kaappi/zig-out/bin/kaappi *)",
+      "Bash(kaappi *)",
+      "Bash(thottam *)",
+      "Bash(../kaappi/scripts/thottam *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git add *)",
+      "Bash(git commit -m *)",
+      "Bash(git push*)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(wc *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(gh pr *)",
+      "Bash(gh run *)"
+    ],
+    "deny": [
+      "Bash(rm -rf //*)",
+      "Bash(sudo *)",
+      "Bash(git push*--force*)",
+      "Read(.env*)",
+      "Read(~/.ssh/**)",
+      "Write(.git/**)"
+    ]
+  }
+}
