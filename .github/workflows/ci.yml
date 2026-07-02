@@ -63,3 +63,7 @@ jobs:
       - name: Smoke test — matrix math
         run: |
           /tmp/kaappi/zig-out/bin/kaappi matrix-math/app.scm demo
+
+      - name: Smoke test — huffman coding
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi huffman-coding/app.scm demo

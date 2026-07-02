@@ -58,13 +58,31 @@
 
 ;; --- Main ---
 
-(let ((args (command-line)))
+(define (user-args)
+  (let ((args (command-line)))
+    (cond
+      ((null? args) '())
+      ((let ((s (car args)))
+         (and (>= (string-length s) 4)
+              (equal? (substring s (- (string-length s) 4) (string-length s))
+                      ".scm")))
+       (cdr args))
+      ((and (pair? (cdr args))
+            (let ((s (cadr args)))
+              (and (>= (string-length s) 4)
+                   (equal? (substring s (- (string-length s) 4)
+                                        (string-length s))
+                           ".scm"))))
+       (cddr args))
+      (else (cdr args)))))
+
+(let ((args (user-args)))
   (cond
-    ((and (>= (length args) 2) (equal? (list-ref args 1) "producer"))
+    ((and (>= (length args) 1) (equal? (car args) "producer"))
      (produce-tasks))
-    ((and (>= (length args) 2) (equal? (list-ref args 1) "worker"))
+    ((and (>= (length args) 1) (equal? (car args) "worker"))
      (run-worker))
-    ((and (>= (length args) 2) (equal? (list-ref args 1) "status"))
+    ((and (>= (length args) 1) (equal? (car args) "status"))
      (show-status))
     (else
      (display "Usage: kaappi app.scm [producer|worker|status]") (newline)

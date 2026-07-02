@@ -310,25 +310,43 @@
 
 ;; --- Main ---
 
-(let ((args (command-line)))
-  (if (< (length args) 2)
+(define (user-args)
+  (let ((args (command-line)))
+    (cond
+      ((null? args) '())
+      ((let ((s (car args)))
+         (and (>= (string-length s) 4)
+              (equal? (substring s (- (string-length s) 4) (string-length s))
+                      ".scm")))
+       (cdr args))
+      ((and (pair? (cdr args))
+            (let ((s (cadr args)))
+              (and (>= (string-length s) 4)
+                   (equal? (substring s (- (string-length s) 4)
+                                        (string-length s))
+                           ".scm"))))
+       (cddr args))
+      (else (cdr args)))))
+
+(let ((args (user-args)))
+  (if (null? args)
       (begin
         (display "Usage: kaappi app.scm <command> [args...]") (newline)
         (display "Commands:") (newline)
         (display "  demo             Run example programs in the interpreter") (newline)
         (display "  eval PROGRAM     Evaluate a program string") (newline)
         (display "  repl             Interactive meta-Scheme REPL") (newline))
-      (let ((cmd (list-ref args 1)))
+      (let ((cmd (car args)))
         (cond
           ((equal? cmd "demo")
            (run-demo))
 
           ((equal? cmd "eval")
-           (if (< (length args) 3)
+           (if (< (length args) 2)
                (begin
                  (display "Usage: kaappi app.scm eval PROGRAM") (newline)
                  (display "Example: kaappi app.scm eval \"(+ 1 2)\"") (newline))
-               (let ((result (run-program (list-ref args 2))))
+               (let ((result (run-program (cadr args))))
                  (write result) (newline))))
 
           ((equal? cmd "repl")

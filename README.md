@@ -145,6 +145,20 @@ kaappi app.scm multiply "((1 2) (3 4))" "((5 6) (7 8))"  # multiply two matrices
 kaappi app.scm power "((1 1) (1 0))" 20                   # Fibonacci via M^20
 ```
 
+### Huffman Coding (Pure Scheme)
+
+Builds optimal prefix codes from character frequencies using a binary
+tree. Encodes and decodes messages with bit-level compression, showing
+tree structure, code tables, and compression ratios. No external
+libraries needed.
+
+```bash
+cd huffman-coding
+kaappi app.scm demo                    # full demo with multiple examples
+kaappi app.scm encode "MISSISSIPPI"    # encode with full analysis
+kaappi app.scm analyze "hello world"   # frequency table and code lengths
+```
+
 ### HTTP File Server
 
 Serves static files from a directory with MIME type detection.

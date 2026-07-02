@@ -285,8 +285,26 @@
 
 ;; --- Main ---
 
-(let ((args (command-line)))
-  (if (< (length args) 2)
+(define (user-args)
+  (let ((args (command-line)))
+    (cond
+      ((null? args) '())
+      ((let ((s (car args)))
+         (and (>= (string-length s) 4)
+              (equal? (substring s (- (string-length s) 4) (string-length s))
+                      ".scm")))
+       (cdr args))
+      ((and (pair? (cdr args))
+            (let ((s (cadr args)))
+              (and (>= (string-length s) 4)
+                   (equal? (substring s (- (string-length s) 4)
+                                        (string-length s))
+                           ".scm"))))
+       (cddr args))
+      (else (cdr args)))))
+
+(let ((args (user-args)))
+  (if (null? args)
       (begin
         (display "Usage: kaappi app.scm <command> [args...]") (newline)
         (display "Commands:") (newline)
@@ -294,25 +312,25 @@
         (display "  bench N               Benchmark with N random elements") (newline)
         (display "  quick ITEMS...        Quicksort the given items") (newline)
         (display "  merge ITEMS...        Merge sort the given items") (newline))
-      (let ((cmd (list-ref args 1)))
+      (let ((cmd (car args)))
         (cond
           ((equal? cmd "demo")
            (run-demo))
 
           ((equal? cmd "bench")
-           (if (< (length args) 3)
+           (if (< (length args) 2)
                (begin (display "Usage: kaappi app.scm bench N") (newline))
-               (let ((n (string->number (list-ref args 2))))
+               (let ((n (string->number (cadr args))))
                  (if n
                      (run-bench n)
                      (begin (display "Invalid number: ")
-                            (display (list-ref args 2)) (newline))))))
+                            (display (cadr args)) (newline))))))
 
           ((or (equal? cmd "quick") (equal? cmd "merge"))
-           (if (< (length args) 3)
+           (if (< (length args) 2)
                (begin (display "Usage: kaappi app.scm ")
                       (display cmd) (display " ITEMS...") (newline))
-               (run-sort cmd (cddr args))))
+               (run-sort cmd (cdr args))))
 
           (else
            (display "Unknown command: ") (display cmd) (newline)

@@ -13,11 +13,29 @@
 (define serve-port 8080)
 (define serve-dir ".")
 
-(let ((args (command-line)))
-  (when (>= (length args) 2)
-    (set! serve-port (or (string->number (list-ref args 1)) 8080)))
-  (when (>= (length args) 3)
-    (set! serve-dir (list-ref args 2))))
+(define (user-args)
+  (let ((args (command-line)))
+    (cond
+      ((null? args) '())
+      ((let ((s (car args)))
+         (and (>= (string-length s) 4)
+              (equal? (substring s (- (string-length s) 4) (string-length s))
+                      ".scm")))
+       (cdr args))
+      ((and (pair? (cdr args))
+            (let ((s (cadr args)))
+              (and (>= (string-length s) 4)
+                   (equal? (substring s (- (string-length s) 4)
+                                        (string-length s))
+                           ".scm"))))
+       (cddr args))
+      (else (cdr args)))))
+
+(let ((args (user-args)))
+  (when (pair? args)
+    (set! serve-port (or (string->number (car args)) 8080)))
+  (when (and (pair? args) (pair? (cdr args)))
+    (set! serve-dir (cadr args))))
 
 ;; --- MIME types ---
 
