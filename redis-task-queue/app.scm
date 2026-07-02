@@ -60,11 +60,11 @@
 
 (let ((args (command-line)))
   (cond
-    ((and (>= (length args) 3) (equal? (list-ref args 2) "producer"))
+    ((and (>= (length args) 2) (equal? (list-ref args 1) "producer"))
      (produce-tasks))
-    ((and (>= (length args) 3) (equal? (list-ref args 2) "worker"))
+    ((and (>= (length args) 2) (equal? (list-ref args 1) "worker"))
      (run-worker))
-    ((and (>= (length args) 3) (equal? (list-ref args 2) "status"))
+    ((and (>= (length args) 2) (equal? (list-ref args 1) "status"))
      (show-status))
     (else
      (display "Usage: kaappi app.scm [producer|worker|status]") (newline)

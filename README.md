@@ -102,6 +102,20 @@ kaappi app.scm eval "(define (adder n) (lambda (x) (+ n x))) ((adder 10) 32)"
 kaappi app.scm repl                                         # interactive REPL
 ```
 
+### Maze Solver (Pure Scheme)
+
+Generates random mazes using recursive backtracker (DFS) and solves them
+with DFS backtracking over immutable visited sets. Renders ASCII art with
+solution path overlay. No external libraries needed.
+
+```bash
+cd maze-solver
+kaappi app.scm demo                    # generate + solve 5x5, 10x10, 15x15
+kaappi app.scm generate 20 10          # just display a 20x10 maze
+kaappi app.scm solve 15 10             # generate + solve + show path
+kaappi app.scm solve 15 10 42          # solve with specific RNG seed
+```
+
 ### HTTP File Server
 
 Serves static files from a directory with MIME type detection.

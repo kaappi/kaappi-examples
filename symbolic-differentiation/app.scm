@@ -205,7 +205,7 @@
   (read (open-input-string str)))
 
 (let ((args (command-line)))
-  (if (< (length args) 3)
+  (if (< (length args) 2)
       (begin
         (display "Usage: kaappi app.scm <command> [args...]") (newline)
         (display "Commands:") (newline)
@@ -213,15 +213,15 @@
         (display "  simplify EXPR    Simplify an expression") (newline)
         (display "  eval EXPR        Evaluate a numeric expression") (newline)
         (display "  demo             Show example differentiations") (newline))
-      (let ((cmd (list-ref args 2)))
+      (let ((cmd (list-ref args 1)))
         (cond
           ((equal? cmd "diff")
-           (if (< (length args) 5)
+           (if (< (length args) 4)
                (begin
                  (display "Usage: kaappi app.scm diff EXPR VAR") (newline)
                  (display "Example: kaappi app.scm diff \"(* x x)\" x") (newline))
-               (let* ((expr (parse-expr (list-ref args 3)))
-                      (var  (string->symbol (list-ref args 4)))
+               (let* ((expr (parse-expr (list-ref args 2)))
+                      (var  (string->symbol (list-ref args 3)))
                       (result (differentiate expr var)))
                  (display "d/d") (display var) (display "  ")
                  (write expr) (newline)
@@ -229,18 +229,18 @@
                  (display "   = ") (display (expr->infix result)) (newline))))
 
           ((equal? cmd "simplify")
-           (if (< (length args) 4)
+           (if (< (length args) 3)
                (begin (display "Usage: kaappi app.scm simplify EXPR") (newline))
-               (let* ((expr (parse-expr (list-ref args 3)))
+               (let* ((expr (parse-expr (list-ref args 2)))
                       (result (simplify expr)))
                  (write expr) (newline)
                  (display "   = ") (write result) (newline)
                  (display "   = ") (display (expr->infix result)) (newline))))
 
           ((equal? cmd "eval")
-           (if (< (length args) 4)
+           (if (< (length args) 3)
                (begin (display "Usage: kaappi app.scm eval EXPR") (newline))
-               (let* ((expr (parse-expr (list-ref args 3)))
+               (let* ((expr (parse-expr (list-ref args 2)))
                       (result (evaluate expr)))
                  (write expr) (display " = ") (display result) (newline))))
 

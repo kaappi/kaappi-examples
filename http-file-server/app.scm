@@ -14,10 +14,10 @@
 (define serve-dir ".")
 
 (let ((args (command-line)))
+  (when (>= (length args) 2)
+    (set! serve-port (or (string->number (list-ref args 1)) 8080)))
   (when (>= (length args) 3)
-    (set! serve-port (or (string->number (list-ref args 2)) 8080)))
-  (when (>= (length args) 4)
-    (set! serve-dir (list-ref args 3))))
+    (set! serve-dir (list-ref args 2))))
 
 ;; --- MIME types ---
 

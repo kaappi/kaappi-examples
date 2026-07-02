@@ -51,3 +51,7 @@ jobs:
       - name: Smoke test — metacircular evaluator
         run: |
           /tmp/kaappi/zig-out/bin/kaappi metacircular-evaluator/app.scm demo
+
+      - name: Smoke test — maze solver
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi maze-solver/app.scm demo

@@ -311,24 +311,24 @@
 ;; --- Main ---
 
 (let ((args (command-line)))
-  (if (< (length args) 3)
+  (if (< (length args) 2)
       (begin
         (display "Usage: kaappi app.scm <command> [args...]") (newline)
         (display "Commands:") (newline)
         (display "  demo             Run example programs in the interpreter") (newline)
         (display "  eval PROGRAM     Evaluate a program string") (newline)
         (display "  repl             Interactive meta-Scheme REPL") (newline))
-      (let ((cmd (list-ref args 2)))
+      (let ((cmd (list-ref args 1)))
         (cond
           ((equal? cmd "demo")
            (run-demo))
 
           ((equal? cmd "eval")
-           (if (< (length args) 4)
+           (if (< (length args) 3)
                (begin
                  (display "Usage: kaappi app.scm eval PROGRAM") (newline)
                  (display "Example: kaappi app.scm eval \"(+ 1 2)\"") (newline))
-               (let ((result (run-program (list-ref args 3))))
+               (let ((result (run-program (list-ref args 2))))
                  (write result) (newline))))
 
           ((equal? cmd "repl")
