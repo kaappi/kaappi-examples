@@ -25,6 +25,7 @@ The ecosystem examples show Kaappi working with PostgreSQL, Redis, and HTTP to b
 | [Maze Solver](#maze-solver) | Generate & solve mazes with DFS backtracking | Intermediate | Recursion, immutable state, bitwise ops |
 | [Huffman Coding](#huffman-coding) | Build prefix codes, encode/decode messages | Intermediate | Tree construction, priority queues, compression |
 | [Matrix Math](#matrix-math) | Matrix multiply, power, exact rationals | Intermediate | Nested recursion, accumulators, exact arithmetic |
+| [Parallel Prime Search](#parallel-prime-search) | Count primes across CPU cores with a worker pool | Intermediate | `(kaappi parallel)`, worker pools, chunking |
 | [Symbolic Differentiation](#symbolic-differentiation) | Symbolic derivatives with simplification | Advanced | AST manipulation, pattern matching, algebra |
 | [Metacircular Evaluator](#metacircular-evaluator) | Scheme interpreting Scheme | Advanced | eval/apply, lexical scoping, closures |
 | [Environment-Model Evaluator](#environment-model-evaluator) | Eager vs. lazy evaluation with thunks | Advanced | Thunks, memoization, call-by-need |
@@ -131,6 +132,21 @@ cd matrix-math
 kaappi app.scm demo                                       # run all demos
 kaappi app.scm multiply "((1 2) (3 4))" "((5 6) (7 8))"  # multiply two matrices
 kaappi app.scm power "((1 1) (1 0))" 20                   # Fibonacci via M^20
+```
+
+### Parallel Prime Search
+
+**Difficulty:** Intermediate | **Concepts:** `(kaappi parallel)` worker pools, chunking work across processors, sequential vs. parallel timing
+
+Counts primes below N by trial division, splitting the range into one
+chunk per available processor and running the chunks on a
+`(kaappi parallel)` pool — real multi-core speedup, not just cooperative
+fibers. `demo` compares sequential and parallel timing directly.
+
+```bash
+cd parallel-primes
+kaappi app.scm demo           # sequential vs. parallel timing comparison
+kaappi app.scm count 200000   # count primes below 200000
 ```
 
 ### Symbolic Differentiation

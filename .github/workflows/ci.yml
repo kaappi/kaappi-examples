@@ -64,6 +64,11 @@ jobs:
         run: |
           /tmp/kaappi/zig-out/bin/kaappi matrix-math/app.scm demo
 
+      - name: Smoke test — parallel prime search
+        run: |
+          /tmp/kaappi/zig-out/bin/kaappi parallel-primes/app.scm demo
+          /tmp/kaappi/zig-out/bin/kaappi parallel-primes/app.scm count 1000
+
       - name: Smoke test — huffman coding
         run: |
           /tmp/kaappi/zig-out/bin/kaappi huffman-coding/app.scm demo
