@@ -13,7 +13,7 @@
 ;;; Prerequisites: none (pure Scheme)
 
 (import (scheme base) (scheme write) (scheme process-context)
-        (scheme inexact) (srfi 151))
+        (srfi 13) (srfi 151))
 
 ;; --- Random Number Generator ---
 ;; LCG with Numerical Recipes constants (mod 2^32)
@@ -128,22 +128,22 @@
         (else
          (let ((visited (cons (cons x y) visited)))
            (let try ((dirs (list N E S W)))
-             (if (null? dirs)
-                 #f
-                 (if (has-passage? g x y (car dirs))
-                     (let* ((d (dir-delta (car dirs)))
-                            (nx (+ x (car d)))
-                            (ny (+ y (cdr d)))
-                            (result (dfs nx ny visited)))
-                       (if result
-                           (cons (cons x y) result)
-                           (try (cdr dirs))))
-                     (try (cdr dirs)))))))))))
+             (cond
+               ((null? dirs) #f)
+               ((has-passage? g x y (car dirs))
+                (let* ((d (dir-delta (car dirs)))
+                       (nx (+ x (car d)))
+                       (ny (+ y (cdr d)))
+                       (result (dfs nx ny visited)))
+                  (if result
+                      (cons (cons x y) result)
+                      (try (cdr dirs)))))
+               (else (try (cdr dirs)))))))))))
 
 ;; --- ASCII Renderer ---
 
 (define (path->set path)
-  (if path path '()))
+  (or path '()))
 
 (define (on-path? path-set x y)
   (coord-member? x y path-set))
@@ -225,17 +225,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 

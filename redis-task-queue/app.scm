@@ -7,7 +7,7 @@
 ;;;   kaappi app.scm worker       — process tasks
 
 (import (scheme base) (scheme write) (scheme process-context)
-        (kaappi redis))
+        (srfi 13) (kaappi redis))
 
 (define conn (redis-connect "127.0.0.1" 6379))
 (define queue-key "task-queue")
@@ -39,13 +39,12 @@
   (display "Waiting for tasks...") (newline)
   (let loop ()
     (let ((task (redis-rpop conn queue-key)))
-      (cond
-        ((eq? task #f)
-         (display "No more tasks. Worker done.") (newline))
-        (else
-         (let ((result (process-task task)))
-           (redis-lpush conn results-key result))
-         (loop))))))
+      (if task
+          (begin
+            (redis-lpush conn results-key (process-task task))
+            (loop))
+          (begin
+            (display "No more tasks. Worker done.") (newline))))))
 
 ;; --- Status ---
 
@@ -62,32 +61,25 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 
+(define (show-usage)
+  (display "Usage: kaappi app.scm [producer|worker|status]") (newline)
+  (display "  producer — enqueue 10 sample tasks") (newline)
+  (display "  worker   — process all pending tasks") (newline)
+  (display "  status   — show queue and results") (newline))
+
 (let ((args (user-args)))
-  (cond
-    ((and (>= (length args) 1) (equal? (car args) "producer"))
-     (produce-tasks))
-    ((and (>= (length args) 1) (equal? (car args) "worker"))
-     (run-worker))
-    ((and (>= (length args) 1) (equal? (car args) "status"))
-     (show-status))
-    (else
-     (display "Usage: kaappi app.scm [producer|worker|status]") (newline)
-     (display "  producer — enqueue 10 sample tasks") (newline)
-     (display "  worker   — process all pending tasks") (newline)
-     (display "  status   — show queue and results") (newline))))
+  (if (null? args)
+      (show-usage)
+      (let ((cmd (car args)))
+        (cond
+          ((equal? cmd "producer") (produce-tasks))
+          ((equal? cmd "worker")   (run-worker))
+          ((equal? cmd "status")   (show-status))
+          (else (show-usage))))))
 
 (redis-disconnect! conn)

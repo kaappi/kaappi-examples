@@ -12,8 +12,8 @@
 ;;;
 ;;; Prerequisites: none (pure Scheme)
 
-(import (scheme base) (scheme write) (scheme read)
-        (scheme process-context) (scheme char))
+(import (scheme base) (scheme write)
+        (scheme process-context) (srfi 13))
 
 ;; --- Huffman Tree ---
 ;; Leaf: (leaf char weight)
@@ -51,14 +51,18 @@
                 (build (cdr remaining)
                        (cons (cons ch 1) freqs))))))))
 
-(define (sort-by-freq lst)
+;; Functional quicksort, also used by the display helpers.
+(define (sort pred lst)
   (if (or (null? lst) (null? (cdr lst)))
       lst
       (let* ((pivot (car lst))
              (rest (cdr lst))
-             (lo (filter (lambda (x) (<= (cdr x) (cdr pivot))) rest))
-             (hi (filter (lambda (x) (> (cdr x) (cdr pivot))) rest)))
-        (append (sort-by-freq lo) (list pivot) (sort-by-freq hi)))))
+             (lo (filter (lambda (x) (pred x pivot)) rest))
+             (hi (filter (lambda (x) (not (pred x pivot))) rest)))
+        (append (sort pred lo) (list pivot) (sort pred hi)))))
+
+(define (sort-by-freq lst)
+  (sort (lambda (a b) (<= (cdr a) (cdr b))) lst))
 
 ;; --- Tree Construction ---
 ;; Insert node into sorted list (by weight), then merge two smallest.
@@ -94,19 +98,14 @@
 (define (generate-codes tree)
   (if (leaf? tree)
       (list (cons (leaf-char tree) "0"))
-      (let ((codes '()))
-        (let traverse ((node tree) (prefix '()))
-          (if (leaf? node)
-              (set! codes (cons (cons (leaf-char node)
-                                      (list->string
-                                       (map (lambda (b)
-                                              (if (= b 0) #\0 #\1))
-                                            (reverse prefix))))
-                                codes))
-              (begin
-                (traverse (branch-left node) (cons 0 prefix))
-                (traverse (branch-right node) (cons 1 prefix)))))
-        codes)))
+      (let traverse ((node tree) (prefix '()) (codes '()))
+        (if (leaf? node)
+            (cons (cons (leaf-char node)
+                        (list->string (reverse prefix)))
+                  codes)
+            (traverse (branch-right node) (cons #\1 prefix)
+                      (traverse (branch-left node) (cons #\0 prefix)
+                                codes))))))
 
 (define (lookup-code codes ch)
   (let ((entry (assv ch codes)))
@@ -123,20 +122,28 @@
 (define (decode bits tree)
   (if (leaf? tree)
       (make-string (string-length bits) (leaf-char tree))
-      (let walk ((i 0) (node tree) (result '()))
-        (cond
-          ((= i (string-length bits))
-           (if (leaf? node)
-               (list->string (reverse (cons (leaf-char node) result)))
-               (list->string (reverse result))))
-          ((leaf? node)
-           (walk i tree (cons (leaf-char node) result)))
-          ((char=? (string-ref bits i) #\0)
-           (walk (+ i 1) (branch-left node) result))
-          (else
-           (walk (+ i 1) (branch-right node) result))))))
+      (let ((len (string-length bits)))
+        (let walk ((i 0) (node tree) (result '()))
+          (cond
+            ((= i len)
+             (if (leaf? node)
+                 (list->string (reverse (cons (leaf-char node) result)))
+                 (list->string (reverse result))))
+            ((leaf? node)
+             (walk i tree (cons (leaf-char node) result)))
+            ((char=? (string-ref bits i) #\0)
+             (walk (+ i 1) (branch-left node) result))
+            (else
+             (walk (+ i 1) (branch-right node) result)))))))
 
 ;; --- Display Helpers ---
+
+;; Printable representation of a character: 'a', ' ', '\n'.
+(define (char-literal ch)
+  (cond
+    ((char=? ch #\space)   "' '")
+    ((char=? ch #\newline) "'\\n'")
+    (else (string-append "'" (string ch) "'"))))
 
 (define (display-freq-table freqs)
   (let ((sorted (sort-by-freq freqs)))
@@ -144,11 +151,7 @@
     (display "  ----  ----") (newline)
     (for-each
      (lambda (f)
-       (display "  ")
-       (cond
-         ((char=? (car f) #\space) (display "' '"))
-         ((char=? (car f) #\newline) (display "'\\n'"))
-         (else (display " '") (display (car f)) (display "'")))
+       (display "  ") (display (string-pad (char-literal (car f)) 4))
        (display "     ") (display (cdr f)) (newline))
      sorted)))
 
@@ -161,31 +164,15 @@
     (display "  ----  ----") (newline)
     (for-each
      (lambda (entry)
-       (display "  ")
-       (cond
-         ((char=? (car entry) #\space) (display "' '"))
-         ((char=? (car entry) #\newline) (display "'\\n'"))
-         (else (display " '") (display (car entry)) (display "'")))
+       (display "  ") (display (string-pad (char-literal (car entry)) 4))
        (display "   ") (display (cdr entry)) (newline))
      sorted)))
-
-(define (sort pred lst)
-  (if (or (null? lst) (null? (cdr lst)))
-      lst
-      (let* ((pivot (car lst))
-             (rest (cdr lst))
-             (lo (filter (lambda (x) (pred x pivot)) rest))
-             (hi (filter (lambda (x) (not (pred x pivot))) rest)))
-        (append (sort pred lo) (list pivot) (sort pred hi)))))
 
 (define (display-tree tree indent)
   (cond
     ((leaf? tree)
      (display indent)
-     (cond
-       ((char=? (leaf-char tree) #\space) (display "' '"))
-       ((char=? (leaf-char tree) #\newline) (display "'\\n'"))
-       (else (display "'") (display (leaf-char tree)) (display "'")))
+     (display (char-literal (leaf-char tree)))
      (display " (") (display (node-weight tree)) (display ")")
      (newline))
     (else
@@ -324,17 +311,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 

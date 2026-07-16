@@ -13,7 +13,7 @@
 ;;; Prerequisites: none (pure Scheme)
 
 (import (scheme base) (scheme write) (scheme process-context)
-        (scheme inexact) (scheme time))
+        (scheme time) (srfi 13))
 
 ;; --- Higher-Order Primitives ---
 ;; Implemented from scratch to showcase closures and recursion.
@@ -268,20 +268,13 @@
     (else #f)))
 
 (define (run-sort algo items)
-  (let* ((parsed (map parse-item items))
-         (less? (if (all-numbers? parsed) < string<?))
-         (sorted (cond
-                   ((equal? algo "quick") (quicksort less? parsed))
-                   ((equal? algo "merge") (merge-sort less? parsed))
-                   (else (begin (display "Unknown algorithm: ")
-                                (display algo) (newline)
-                                (display "Use: quick or merge") (newline)
-                                '())))))
-    (when (pair? sorted)
-      (for-each (lambda (x)
-                  (display x) (display " "))
-                sorted)
-      (newline))))
+  (let* ((sort (if (equal? algo "quick") quicksort merge-sort))
+         (parsed (map parse-item items))
+         (less? (if (all-numbers? parsed) < string<?)))
+    (for-each (lambda (x)
+                (display x) (display " "))
+              (sort less? parsed))
+    (newline)))
 
 ;; --- Main ---
 
@@ -289,17 +282,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 
