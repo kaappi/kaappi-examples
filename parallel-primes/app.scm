@@ -20,7 +20,7 @@
 ;;; Prerequisites: none (pure Scheme)
 
 (import (scheme base) (scheme write) (scheme process-context)
-        (scheme time) (srfi 1) (kaappi parallel))
+        (scheme time) (srfi 1) (srfi 13) (kaappi parallel))
 
 ;; --- Primality (trial division) ---
 
@@ -65,7 +65,7 @@
   (let* ((t0 (current-jiffy))
          (result (thunk))
          (t1 (current-jiffy)))
-    (values result (/ (- t1 t0) (exact->inexact (jiffies-per-second))))))
+    (values result (/ (- t1 t0) (inexact (jiffies-per-second))))))
 
 ;; --- Commands ---
 
@@ -79,20 +79,17 @@
     (display "Counting primes below ") (display n)
     (display " (") (display workers) (display " processors available)")
     (newline)
-    (call-with-values
-      (lambda () (elapsed-seconds (lambda () (count-primes-in-range 2 n))))
-      (lambda (seq-count seq-time)
-        (call-with-values
-          (lambda () (elapsed-seconds (lambda () (parallel-count-primes n workers))))
-          (lambda (par-count par-time)
-            (display "  sequential:            ") (display seq-count)
-            (display " primes in ") (display seq-time) (display "s") (newline)
-            (display "  parallel (") (display workers) (display " chunks): ")
-            (display par-count)
-            (display " primes in ") (display par-time) (display "s") (newline)
-            (if (> par-time 0)
-                (begin (display "  speedup: ") (display (/ seq-time par-time)) (display "x") (newline))
-                #f)))))))
+    (let*-values (((seq-count seq-time)
+                   (elapsed-seconds (lambda () (count-primes-in-range 2 n))))
+                  ((par-count par-time)
+                   (elapsed-seconds (lambda () (parallel-count-primes n workers)))))
+      (display "  sequential:            ") (display seq-count)
+      (display " primes in ") (display seq-time) (display "s") (newline)
+      (display "  parallel (") (display workers) (display " chunks): ")
+      (display par-count)
+      (display " primes in ") (display par-time) (display "s") (newline)
+      (when (> par-time 0)
+        (display "  speedup: ") (display (/ seq-time par-time)) (display "x") (newline)))))
 
 ;; --- Main ---
 
@@ -100,17 +97,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 

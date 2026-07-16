@@ -19,7 +19,7 @@
 ;;; Prerequisites: none (pure Scheme)
 
 (import (scheme base) (scheme write) (scheme read)
-        (scheme process-context) (scheme cxr))
+        (scheme process-context) (scheme cxr) (srfi 13))
 
 ;; --- Evaluation Strategy ---
 
@@ -296,18 +296,11 @@
 
 ;; --- Program Runner ---
 
-(define (run-program program-str)
-  (set! *lazy* #f)
-  (let ((env (make-global-env))
-        (port (open-input-string program-str)))
-    (let loop ((result (if #f #f)))
-      (let ((expr (read port)))
-        (if (eof-object? expr)
-            result
-            (loop (mc-eval expr env)))))))
-
-(define (run-program-lazy program-str)
-  (set! *lazy* #t)
+;; Evaluate every form in program-str under the given strategy and
+;; return the (forced) value of the last one. force-value is a no-op
+;; on eager results, and resetting *lazy* to #f is always safe.
+(define (run-with-strategy lazy? program-str)
+  (set! *lazy* lazy?)
   (let ((env (make-global-env))
         (port (open-input-string program-str)))
     (let loop ((result (if #f #f)))
@@ -317,6 +310,9 @@
               (set! *lazy* #f)
               final)
             (loop (mc-eval expr env)))))))
+
+(define (run-program program-str)      (run-with-strategy #f program-str))
+(define (run-program-lazy program-str) (run-with-strategy #t program-str))
 
 ;; --- Demo Programs ---
 
@@ -378,21 +374,9 @@
 
 ;; --- Demo Runner ---
 
-(define (show label program)
+(define (show-with-strategy lazy? label program)
   (display "  ") (display label) (newline)
-  (set! *lazy* #f)
-  (let ((env (make-global-env))
-        (port (open-input-string program)))
-    (let loop ((result (if #f #f)))
-      (let ((expr (read port)))
-        (if (eof-object? expr)
-            (begin (display "  => ") (write result) (newline) (newline))
-            (begin (display "  > ") (write expr) (newline)
-                   (loop (mc-eval expr env))))))))
-
-(define (show-lazy label program)
-  (display "  ") (display label) (newline)
-  (set! *lazy* #t)
+  (set! *lazy* lazy?)
   (let ((env (make-global-env))
         (port (open-input-string program)))
     (let loop ((result (if #f #f)))
@@ -403,6 +387,9 @@
               (display "  => ") (write final) (newline) (newline))
             (begin (display "  > ") (write expr) (newline)
                    (loop (mc-eval expr env))))))))
+
+(define (show label program)      (show-with-strategy #f label program))
+(define (show-lazy label program) (show-with-strategy #t label program))
 
 (define (run-demo)
   (display "--- Environment-Model Evaluator Demo ---") (newline)
@@ -457,17 +444,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 

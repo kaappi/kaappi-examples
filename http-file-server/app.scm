@@ -1,89 +1,71 @@
 ;;; HTTP File Server
 ;;;
-;;; Serves static files from a directory with directory listing.
-;;; Demonstrates HTTP server with dynamic content generation.
+;;; Serves static files from a directory, falling back to index.html
+;;; for directory paths. Demonstrates HTTP serving with MIME type
+;;; detection and HTML error pages.
 ;;;
 ;;; Usage: kaappi app.scm [port] [directory]
 ;;;   Default: port 8080, current directory
 
-(import (scheme base) (scheme write) (scheme read)
+(import (scheme base) (scheme write)
         (scheme file) (scheme process-context)
-        (kaappi http))
-
-(define serve-port 8080)
-(define serve-dir ".")
+        (srfi 13) (srfi 170) (kaappi http))
 
 (define (user-args)
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 
-(let ((args (user-args)))
-  (when (pair? args)
-    (set! serve-port (or (string->number (car args)) 8080)))
-  (when (and (pair? args) (pair? (cdr args)))
-    (set! serve-dir (cadr args))))
+(define cli-args (user-args))
+
+(define serve-port
+  (if (pair? cli-args)
+      (or (string->number (car cli-args)) 8080)
+      8080))
+
+(define serve-dir
+  (if (and (pair? cli-args) (pair? (cdr cli-args)))
+      (cadr cli-args)
+      "."))
 
 ;; --- MIME types ---
 
 (define (guess-mime-type path)
   (cond
-    ((has-suffix? path ".html") "text/html")
-    ((has-suffix? path ".css")  "text/css")
-    ((has-suffix? path ".js")   "application/javascript")
-    ((has-suffix? path ".json") "application/json")
-    ((has-suffix? path ".txt")  "text/plain")
-    ((has-suffix? path ".scm")  "text/plain")
-    ((has-suffix? path ".sld")  "text/plain")
-    ((has-suffix? path ".md")   "text/markdown")
-    ((has-suffix? path ".xml")  "application/xml")
-    ((has-suffix? path ".csv")  "text/csv")
+    ((string-suffix? ".html" path) "text/html")
+    ((string-suffix? ".css"  path) "text/css")
+    ((string-suffix? ".js"   path) "application/javascript")
+    ((string-suffix? ".json" path) "application/json")
+    ((string-suffix? ".txt"  path) "text/plain")
+    ((string-suffix? ".scm"  path) "text/plain")
+    ((string-suffix? ".sld"  path) "text/plain")
+    ((string-suffix? ".md"   path) "text/markdown")
+    ((string-suffix? ".xml"  path) "application/xml")
+    ((string-suffix? ".csv"  path) "text/csv")
     (else "application/octet-stream")))
-
-(define (has-suffix? str suffix)
-  (and (>= (string-length str) (string-length suffix))
-       (equal? (substring str (- (string-length str) (string-length suffix))
-                          (string-length str))
-               suffix)))
 
 ;; --- File reading ---
 
 (define (read-text-file path)
-  (if (file-exists? path)
-      (let ((port (open-input-file path)))
-        (let loop ((acc (open-output-string)))
-          (let ((ch (read-char port)))
-            (if (eof-object? ch)
-                (begin (close-input-port port)
-                       (get-output-string acc))
-                (begin (write-char ch acc)
-                       (loop acc))))))
-      #f))
+  (and (file-exists? path)
+       (call-with-input-file path
+         (lambda (port)
+           (let ((out (open-output-string)))
+             (let loop ()
+               (let ((ch (read-char port)))
+                 (if (eof-object? ch)
+                     (get-output-string out)
+                     (begin (write-char ch out)
+                            (loop))))))))))
 
 ;; --- Path safety ---
 
 (define (safe-path? path)
-  (let ((len (string-length path)))
-    (let loop ((i 0))
-      (cond
-        ((>= i (- len 1)) #t)
-        ((and (char=? (string-ref path i) #\.)
-              (char=? (string-ref path (+ i 1)) #\.))
-         #f)
-        (else (loop (+ i 1)))))))
+  (not (string-contains path "..")))
 
 ;; --- HTML helpers ---
 
@@ -103,6 +85,20 @@
 
 ;; --- Handler ---
 
+;; The path if it names a regular file, #f otherwise. Directories fall
+;; through to the index.html clause below.
+(define (existing-file path)
+  (and (file-exists? path)
+       (file-info-regular? (file-info path))
+       path))
+
+(define (serve-file path)
+  (let ((content (read-text-file path)))
+    (if content
+        (make-response 200 content
+          (list (cons "Content-Type" (guess-mime-type path))))
+        (make-response 500 "Could not read file"))))
+
 (define (handler request)
   (let* ((url-path (request-path request))
          (file-path (string-append serve-dir url-path)))
@@ -114,19 +110,9 @@
       ((not (safe-path? url-path))
        (make-response 403 "Forbidden"))
 
-      ;; Try to serve file
-      ((file-exists? file-path)
-       (let ((content (read-text-file file-path)))
-         (if content
-             (make-response 200 content
-               (list (cons "Content-Type" (guess-mime-type file-path))))
-             (make-response 500 "Could not read file"))))
-
-      ;; Index file
-      ((file-exists? (string-append file-path "/index.html"))
-       (let ((content (read-text-file (string-append file-path "/index.html"))))
-         (make-response 200 content
-           '(("Content-Type" . "text/html")))))
+      ;; Serve the file itself, or index.html for a directory
+      ((existing-file file-path) => serve-file)
+      ((existing-file (string-append file-path "/index.html")) => serve-file)
 
       ;; 404
       (else

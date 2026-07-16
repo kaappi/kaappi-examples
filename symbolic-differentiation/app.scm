@@ -15,7 +15,7 @@
 ;;; Prerequisites: none (pure Scheme)
 
 (import (scheme base) (scheme write) (scheme process-context)
-        (scheme read) (scheme cxr) (scheme inexact))
+        (scheme read) (scheme cxr) (scheme inexact) (srfi 13))
 
 ;; --- AST Predicates & Accessors ---
 
@@ -208,17 +208,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 

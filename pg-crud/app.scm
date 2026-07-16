@@ -6,35 +6,36 @@
 ;;; Usage: kaappi app.scm [add|list|search|delete|stats]
 
 (import (scheme base) (scheme write) (scheme process-context)
-        (kaappi pg))
+        (srfi 13) (kaappi pg))
 
-(define db (pg-connect "dbname=kaappi_demo"))
-
-;; --- Schema ---
-
-(pg-exec db "CREATE TABLE IF NOT EXISTS contacts (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT,
-  phone TEXT,
-  favorite BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT now()
-)")
+;; Connect and make sure the schema exists. Binding the connection with
+;; define keeps script mode from echoing pg-exec's return value.
+(define db
+  (let ((conn (pg-connect "dbname=kaappi_demo")))
+    (pg-exec conn "CREATE TABLE IF NOT EXISTS contacts (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      favorite BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT now()
+    )")
+    conn))
 
 ;; --- Commands ---
 
 (define (add-contact name email phone)
-  (let ((rows (pg-query db
-                "INSERT INTO contacts (name, email, phone)
-                 VALUES ($1, $2, $3)
-                 RETURNING id, name, email, phone"
-                name
-                (if (equal? email "") #f email)
-                (if (equal? phone "") #f phone))))
-    (let ((row (car rows)))
-      (display "Created contact #") (display (vector-ref row 0))
-      (display ": ") (display (vector-ref row 1))
-      (newline))))
+  (let* ((rows (pg-query db
+                 "INSERT INTO contacts (name, email, phone)
+                  VALUES ($1, $2, $3)
+                  RETURNING id, name, email, phone"
+                 name
+                 (if (equal? email "") #f email)
+                 (if (equal? phone "") #f phone)))
+         (row (car rows)))
+    (display "Created contact #") (display (vector-ref row 0))
+    (display ": ") (display (vector-ref row 1))
+    (newline)))
 
 (define (list-contacts)
   (let ((cur (pg-cursor db)))
@@ -51,7 +52,7 @@
             (display "  <") (display (vector-ref row 2)) (display ">"))
           (when (vector-ref row 3)
             (display "  ") (display (vector-ref row 3)))
-          (when (eq? (vector-ref row 4) #t)
+          (when (vector-ref row 4)
             (display "  *"))
           (newline)
           (loop))))
@@ -76,27 +77,28 @@
 
 (define (delete-contact id-str)
   (let ((id (string->number id-str)))
-    (if (not id)
-        (begin (display "Invalid ID") (newline))
-        (let ((n (pg-exec db "DELETE FROM contacts WHERE id = $1" id)))
-          (if (> n 0)
-              (begin (display "Deleted contact #") (display id) (newline))
-              (begin (display "Contact not found") (newline)))))))
+    (cond
+      ((not id)
+       (display "Invalid ID") (newline))
+      ((> (pg-exec db "DELETE FROM contacts WHERE id = $1" id) 0)
+       (display "Deleted contact #") (display id) (newline))
+      (else
+       (display "Contact not found") (newline)))))
 
 (define (show-stats)
-  (let ((rows (pg-query db
-                "SELECT
-                   COUNT(*) AS total,
-                   COUNT(email) AS with_email,
-                   COUNT(phone) AS with_phone,
-                   COUNT(*) FILTER (WHERE favorite) AS favorites
-                 FROM contacts")))
-    (let ((row (car rows)))
-      (display "Contact Statistics:") (newline)
-      (display "  Total:     ") (display (vector-ref row 0)) (newline)
-      (display "  Has email: ") (display (vector-ref row 1)) (newline)
-      (display "  Has phone: ") (display (vector-ref row 2)) (newline)
-      (display "  Favorites: ") (display (vector-ref row 3)) (newline))))
+  (let* ((rows (pg-query db
+                 "SELECT
+                    COUNT(*) AS total,
+                    COUNT(email) AS with_email,
+                    COUNT(phone) AS with_phone,
+                    COUNT(*) FILTER (WHERE favorite) AS favorites
+                  FROM contacts"))
+         (row (car rows)))
+    (display "Contact Statistics:") (newline)
+    (display "  Total:     ") (display (vector-ref row 0)) (newline)
+    (display "  Has email: ") (display (vector-ref row 1)) (newline)
+    (display "  Has phone: ") (display (vector-ref row 2)) (newline)
+    (display "  Favorites: ") (display (vector-ref row 3)) (newline)))
 
 (define (seed-data)
   (call-with-pg-transaction db
@@ -118,41 +120,34 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 
+(define (show-usage)
+  (display "Usage: kaappi app.scm <command>") (newline)
+  (display "  seed                      — insert sample data") (newline)
+  (display "  list                      — list all contacts") (newline)
+  (display "  search <term>             — search by name/email/phone") (newline)
+  (display "  add <name> <email> <phone> — add a contact") (newline)
+  (display "  delete <id>               — delete by ID") (newline)
+  (display "  stats                     — show statistics") (newline))
+
 (let ((args (user-args)))
-  (cond
-    ((and (>= (length args) 4) (equal? (car args) "add"))
-     (add-contact (cadr args) (caddr args) (cadddr args)))
-    ((and (>= (length args) 1) (equal? (car args) "list"))
-     (list-contacts))
-    ((and (>= (length args) 2) (equal? (car args) "search"))
-     (search-contacts (cadr args)))
-    ((and (>= (length args) 2) (equal? (car args) "delete"))
-     (delete-contact (cadr args)))
-    ((and (>= (length args) 1) (equal? (car args) "stats"))
-     (show-stats))
-    ((and (>= (length args) 1) (equal? (car args) "seed"))
-     (seed-data))
-    (else
-     (display "Usage: kaappi app.scm <command>") (newline)
-     (display "  seed                      — insert sample data") (newline)
-     (display "  list                      — list all contacts") (newline)
-     (display "  search <term>             — search by name/email/phone") (newline)
-     (display "  add <name> <email> <phone> — add a contact") (newline)
-     (display "  delete <id>               — delete by ID") (newline)
-     (display "  stats                     — show statistics") (newline))))
+  (if (null? args)
+      (show-usage)
+      (let ((cmd (car args)))
+        (cond
+          ((and (equal? cmd "add") (>= (length args) 4))
+           (add-contact (cadr args) (caddr args) (cadddr args)))
+          ((equal? cmd "list") (list-contacts))
+          ((and (equal? cmd "search") (>= (length args) 2))
+           (search-contacts (cadr args)))
+          ((and (equal? cmd "delete") (>= (length args) 2))
+           (delete-contact (cadr args)))
+          ((equal? cmd "stats") (show-stats))
+          ((equal? cmd "seed") (seed-data))
+          (else (show-usage))))))
 
 (pg-close db)

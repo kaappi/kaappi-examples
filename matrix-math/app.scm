@@ -12,7 +12,7 @@
 ;;; Prerequisites: none (pure Scheme)
 
 (import (scheme base) (scheme write) (scheme read)
-        (scheme process-context) (scheme inexact))
+        (scheme process-context) (srfi 13))
 
 ;; --- Matrix Representation ---
 ;; A matrix is a vector of row vectors.
@@ -292,17 +292,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 

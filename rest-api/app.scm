@@ -9,7 +9,7 @@
 ;;;
 ;;; Requires: PostgreSQL (createdb kaappi_demo), Redis
 
-(import (scheme base) (scheme write)
+(import (scheme base) (scheme write) (srfi 13)
         (kaappi http) (kaappi pg) (kaappi redis) (kaappi json))
 
 ;; --- Configuration ---
@@ -21,15 +21,19 @@
 
 ;; --- Database setup ---
 
-(define db (pg-connect pg-conninfo))
-(define cache (redis-connect redis-host redis-port))
+;; Connect and make sure the schema exists. Binding the connection with
+;; define keeps script mode from echoing pg-exec's return value.
+(define db
+  (let ((conn (pg-connect pg-conninfo)))
+    (pg-exec conn "CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT now()
+    )")
+    conn))
 
-(pg-exec db "CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT now()
-)")
+(define cache (redis-connect redis-host redis-port))
 
 (display "Database ready") (newline)
 
@@ -47,11 +51,17 @@
     ("created_at" . ,(vector-ref row 3))))
 
 (define (parse-path-id path prefix)
-  (if (and (> (string-length path) (string-length prefix))
-           (equal? (substring path 0 (string-length prefix)) prefix))
-      (string->number (substring path (string-length prefix)
-                                 (string-length path)))
-      #f))
+  (and (string-prefix? prefix path)
+       (string->number (substring path (string-length prefix)
+                                  (string-length path)))))
+
+;; "name=Alice" -> ("name" . "Alice"), split on the first #\=
+(define (split-form-pair pair-str)
+  (let ((i (string-index pair-str #\=)))
+    (if i
+        (cons (substring pair-str 0 i)
+              (substring pair-str (+ i 1) (string-length pair-str)))
+        (cons pair-str ""))))
 
 (define (parse-body request)
   (let ((body (request-body request))
@@ -59,29 +69,17 @@
     (cond
       ((equal? body "") '())
       ;; JSON body: {"name": "Alice", "email": "alice@example.com"}
-      ((let loop ((i 0))
-         (cond ((>= i (string-length ct)) #f)
-               ((and (>= (- (string-length ct) i) 16)
-                     (equal? (substring ct i (+ i 16)) "application/json")) #t)
-               (else (loop (+ i 1)))))
+      ((string-contains ct "application/json")
        (let ((obj (json-read-string body)))
          (if (list? obj) obj '())))
       ;; Form body: name=Alice&email=alice@example.com
       (else
-       (map (lambda (pair-str)
-              (let loop ((i 0))
-                (cond ((= i (string-length pair-str)) (cons pair-str ""))
-                      ((char=? (string-ref pair-str i) #\=)
-                       (cons (substring pair-str 0 i)
-                             (substring pair-str (+ i 1) (string-length pair-str))))
-                      (else (loop (+ i 1))))))
-            (let split ((s body) (acc '()))
-              (let loop ((i 0))
-                (cond ((= i (string-length s)) (reverse (cons s acc)))
-                      ((char=? (string-ref s i) #\&)
-                       (split (substring s (+ i 1) (string-length s))
-                              (cons (substring s 0 i) acc)))
-                      (else (loop (+ i 1)))))))))))
+       (map split-form-pair (string-split body "&"))))))
+
+;; Look up a form/JSON parameter, defaulting to "".
+(define (param-ref params key)
+  (cond ((assoc key params) => cdr)
+        (else "")))
 
 ;; --- Cache helpers ---
 
@@ -135,8 +133,8 @@
       ;; Create user
       ((and (equal? method "POST") (equal? path "/users"))
        (let* ((params (parse-body request))
-              (name  (cdr (or (assoc "name" params) '("" . ""))))
-              (email (cdr (or (assoc "email" params) '("" . "")))))
+              (name  (param-ref params "name"))
+              (email (param-ref params "email")))
          (if (or (equal? name "") (equal? email ""))
              (json-response 400 '(("error" . "name and email required")))
              (let ((rows (pg-query db

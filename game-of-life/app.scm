@@ -15,7 +15,7 @@
 ;;; Prerequisites: none (pure Scheme)
 
 (import (scheme base) (scheme write) (scheme process-context)
-        (scheme inexact) (scheme time))
+        (scheme time) (srfi 13) (srfi 18))
 
 ;; --- Random Number Generator ---
 
@@ -176,10 +176,8 @@
         (display (if (= (grid-ref grid r c) 1) "#" ".")))
       (newline))))
 
-(define (busy-wait-ms ms)
-  (let ((target (+ (current-jiffy)
-                   (quotient (* ms (jiffies-per-second)) 1000))))
-    (let wait () (when (< (current-jiffy) target) (wait)))))
+(define (sleep-ms ms)
+  (thread-sleep! (/ ms 1000)))
 
 (define (time-ms thunk)
   (let* ((start (current-jiffy))
@@ -207,7 +205,7 @@
     (display "Conway's Game of Life") (newline)
     (display-grid g gen)
     (if (= gen n-gens) g
-        (begin (busy-wait-ms delay-ms)
+        (begin (sleep-ms delay-ms)
                (loop (next-generation g) (+ gen 1))))))
 
 ;; --- Demo ---
@@ -266,17 +264,8 @@
   (let ((args (command-line)))
     (cond
       ((null? args) '())
-      ((let ((s (car args)))
-         (and (>= (string-length s) 4)
-              (equal? (substring s (- (string-length s) 4) (string-length s))
-                      ".scm")))
-       (cdr args))
-      ((and (pair? (cdr args))
-            (let ((s (cadr args)))
-              (and (>= (string-length s) 4)
-                   (equal? (substring s (- (string-length s) 4)
-                                        (string-length s))
-                           ".scm"))))
+      ((string-suffix? ".scm" (car args)) (cdr args))
+      ((and (pair? (cdr args)) (string-suffix? ".scm" (cadr args)))
        (cddr args))
       (else (cdr args)))))
 
@@ -297,16 +286,19 @@
 
           ((equal? cmd "glider")
            (if (< (length args) 4)
-               (display "Usage: kaappi app.scm glider W H N\n")
+               (begin
+                 (display "Usage: kaappi app.scm glider W H N") (newline))
                (let ((w (string->number (cadr args)))
                      (h (string->number (caddr args)))
                      (n (string->number (cadddr args))))
                  (run-simulation (make-pattern-grid "glider" h w) n 1)
+                 ;; return unspecified so script mode doesn't echo the grid
                  (if #f #f))))
 
           ((equal? cmd "gun")
            (if (< (length args) 4)
-               (display "Usage: kaappi app.scm gun W H N\n")
+               (begin
+                 (display "Usage: kaappi app.scm gun W H N") (newline))
                (let ((w (string->number (cadr args)))
                      (h (string->number (caddr args)))
                      (n (string->number (cadddr args))))
@@ -315,11 +307,13 @@
 
           ((equal? cmd "random")
            (if (< (length args) 4)
-               (display "Usage: kaappi app.scm random W H N [SEED] [DENSITY]\n")
+               (begin
+                 (display "Usage: kaappi app.scm random W H N [SEED] [DENSITY]")
+                 (newline))
                (let* ((w (string->number (cadr args)))
                       (h (string->number (caddr args)))
                       (n (string->number (cadddr args)))
-                      (rest (cddr (cddr args)))
+                      (rest (list-tail args 4))
                       (seed (if (pair? rest)
                                 (or (string->number (car rest)) 42) 42))
                       (density (if (and (pair? rest) (pair? (cdr rest)))
